@@ -1,11 +1,8 @@
+<div align="center">
 
 # 🔭 Cloud-Native Observability & Incident Response Platform
 
-<p align="center">
-
-**End-to-end metrics, logs, traces, dashboards, alerting, and incident investigation**
-
-<br>
+**End-to-end metrics, logs, traces, dashboards, alerting, and incident investigation — built and battle-tested against a real simulated production incident.**
 
 <img src="https://img.shields.io/badge/OpenTelemetry-7C3AED?style=for-the-badge&logo=opentelemetry&logoColor=white" alt="OpenTelemetry"/>
 <img src="https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" alt="Prometheus"/>
@@ -14,27 +11,28 @@
 <img src="https://img.shields.io/badge/Tempo-F46800?style=for-the-badge&logo=grafana&logoColor=white" alt="Tempo"/>
 <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"/>
 
-</p>
+[Overview](#-overview) • [Architecture](#️-architecture) • [Live Incident Walkthrough](#-live-incident-walkthrough) • [Running It](#️-running-the-project) • [Key Lessons](#-key-lessons)
+
+</div>
 
 ---
+
+<img src="screenshots/incident-demo.gif" alt="End-to-end incident: alert fires, dashboard degrades, root cause pinpointed, then recovers" width="850"/>
+
 
 ## 📌 Overview
 
-Modern applications don't fail with a simple **"server is down"** message.
+Modern applications don't fail with a simple **"server is down"** message. A production incident shows up as elevated latency, a rising error rate, a memory leak, or a struggling dependency — and finding the *actual* root cause takes more than one dashboard.
 
-A production incident can appear as increased latency, elevated error rates, resource exhaustion, failed dependencies, or unexpected application behavior. Finding the actual root cause requires more than a single monitoring dashboard.
+This project is an **end-to-end observability platform** that collects and correlates the three pillars of telemetry:
 
-This project implements an **end-to-end observability platform** that collects and correlates the three primary telemetry signals:
+> **Metrics + Logs + Traces**
 
-**Metrics + Logs + Traces**
-
-The platform uses **OpenTelemetry** as the telemetry layer and integrates **Prometheus, Loki, Tempo, Grafana, and Alertmanager** into a unified monitoring and incident-response workflow.
-
-The system is also tested by intentionally introducing application failures and using the collected telemetry to identify the root cause and validate recovery.
+It uses **OpenTelemetry** as the instrumentation and transport layer, and wires **Prometheus, Loki, Tempo, Grafana, and Alertmanager** into a single incident-response workflow. To prove the pipeline actually works — not just looks good — the app is stress-tested with an injected database-latency and memory-leak fault, and the resulting telemetry is used to detect, investigate, pinpoint, fix, and verify the incident end to end.
 
 ---
 
-# 🏗️ Architecture
+## 🏗️ Architecture
 
 ```text
                          ┌─────────────────────────┐
@@ -42,357 +40,135 @@ The system is also tested by intentionally introducing application failures and 
                          │       Application       │
                          └────────────┬────────────┘
                                       │
-                              OpenTelemetry
-                                      │
-                                    OTLP
+                              OpenTelemetry (OTLP)
                                       │
                                       ▼
                     ┌────────────────────────────────┐
                     │    OpenTelemetry Collector     │
-                    │                                │
-                    │  Receivers → Processors        │
-                    │              → Exporters       │
+                    │   Receivers → Processors →     │
+                    │            Exporters            │
                     └───────────────┬────────────────┘
                                     │
                    ┌────────────────┼────────────────┐
-                   │                │                │
                    ▼                ▼                ▼
              ┌───────────┐    ┌───────────┐    ┌───────────┐
              │Prometheus │    │   Loki    │    │   Tempo   │
-             │           │    │           │    │           │
              │  Metrics  │    │   Logs    │    │  Traces   │
              └─────┬─────┘    └─────┬─────┘    └─────┬─────┘
-                   │                │                │
                    └────────────────┼────────────────┘
-                                    │
                                     ▼
                               ┌────────────┐
                               │  Grafana   │
-                              │            │
                               │ Dashboards │
                               │ Correlation│
                               └─────┬──────┘
-                                    │
                                     ▼
                              ┌──────────────┐
                              │ Alertmanager │
-                             │              │
-                             │ Alert        │
-                             │ Routing      │
+                             │ Alert Routing│
                              └──────────────┘
 ```
 
 ---
 
-# 🧩 Technology Stack
+## 🧩 Technology Stack
 
-| Technology                  | Purpose                                              |
-| --------------------------- | ---------------------------------------------------- |
-| **Node.js / Express**       | Demo application and telemetry source                |
-| **OpenTelemetry**           | Application instrumentation and telemetry collection |
-| **OTLP**                    | Telemetry transport protocol                         |
-| **OpenTelemetry Collector** | Receives, processes, and exports telemetry           |
-| **Prometheus**              | Metrics storage and querying                         |
-| **Loki**                    | Centralized log aggregation                          |
-| **Tempo**                   | Distributed trace storage                            |
-| **Grafana**                 | Unified visualization and telemetry correlation      |
-| **Alertmanager**            | Alert handling and routing                           |
-| **Docker / Docker Compose** | Containerized deployment and service orchestration   |
+| Technology | Purpose |
+|---|---|
+| **Node.js / Express** | Demo application and telemetry source |
+| **OpenTelemetry** | Application instrumentation and telemetry collection |
+| **OTLP** | Telemetry transport protocol |
+| **OpenTelemetry Collector** | Receives, processes, and exports telemetry |
+| **Prometheus** | Metrics storage and PromQL querying |
+| **Loki** | Centralized log aggregation and LogQL querying |
+| **Tempo** | Distributed trace storage |
+| **Grafana** | Unified dashboards + cross-signal correlation |
+| **Alertmanager** | Alert routing and lifecycle (firing → resolved) |
+| **Docker / Docker Compose** | Containerized deployment and orchestration |
 
 ---
 
-# 🔥 Why This Project?
+## 🔥 Why This Project?
 
-Traditional monitoring often answers:
+Traditional monitoring answers: **"Is something wrong?"**
+Observability answers: **"What's wrong, where, why, and how do I know it's fixed?"**
 
-> **"Is something wrong?"**
-
-A modern observability platform should help answer:
-
-> **"What is wrong, where did it happen, why did it happen, and how do I verify the fix?"**
-
-This project demonstrates that workflow by connecting telemetry from the application all the way to visualization and alerting.
+This project doesn't stop at building dashboards — it proves the pipeline by running a real incident through it, end to end:
 
 ```text
-Application
-     │
-     ▼
-Telemetry Generation
-     │
-     ▼
-OpenTelemetry
-     │
-     ▼
-Telemetry Collection
-     │
-     ├────────── Metrics ──────────► Prometheus
-     │
-     ├────────── Logs ─────────────► Loki
-     │
-     └────────── Traces ───────────► Tempo
-                                      │
-                                      ▼
-                                   Grafana
-                                      │
-                                      ▼
-                                 Investigation
-                                      │
-                                      ▼
-                                  Root Cause
+Detect  →  Investigate  →  Pinpoint  →  Fix  →  Verify
 ```
 
 ---
 
-# 📊 The Three Pillars of Observability
+## 📊 The Three Pillars
 
-## 1. 📈 Metrics
+| Pillar | Answers | Backend |
+|---|---|---|
+| 📈 **Metrics** | *What* is happening? (rate, errors, duration, saturation) | Prometheus |
+| 📝 **Logs** | *What happened*, in detail? | Loki |
+| 🔍 **Traces** | *Where* did the request spend its time or fail? | Tempo |
 
-Metrics provide numerical measurements of application and system behavior over time.
-
-Examples:
-
-* Request rate
-* Error rate
-* Request latency
-* CPU utilization
-* Memory utilization
-* Application availability
-
-**Backend:** Prometheus
+The value isn't collecting three signals in isolation — it's **correlating** them: a metric tells you something's wrong, a trace ID in the logs tells you which request, and the trace itself shows you the exact slow span.
 
 ---
 
-## 2. 📝 Logs
+## 🎬 Live Incident Walkthrough
 
-Logs provide detailed events generated by the application.
+To validate the stack, I injected a fault into the demo app — `SIMULATE_DB_LATENCY=true` (every DB query takes 800–2000ms and 30% of `/api/orders` calls return 503) plus `SIMULATE_MEMORY_LEAK=true` (each `/api/users` call leaks 1MB) — then generated sustained load and walked the incident through all three signals.
 
-They answer:
+### 1️⃣ Detect — Prometheus fires an alert
 
-> **What happened?**
+The `HighLatency` rule (`P95 > 0.5s` for 30s) transitions to **FIRING**, alongside `HighErrorRate`.
 
-Logs can be searched and correlated with other telemetry during incident investigation.
+<img src="screenshots/alertmanager-firing.png" alt="Prometheus alert rules page showing HighLatency FIRING with P95 latency breached" width="850"/>
 
-**Backend:** Loki
+### 2️⃣ Confirm — Grafana's Golden Signals dashboard turns red
 
----
+Traffic, error rate, latency, and memory saturation all move at once — error rate climbs past 15%, P95/P99 latency spike to 4–5s, and heap usage climbs steadily from the leak.
 
-## 3. 🔍 Traces
+<img src="screenshots/dashboard-error.png" alt="Grafana Four Golden Signals dashboard showing correlated latency, error rate, and memory spikes" width="850"/>
 
-Traces represent the lifecycle of a request as it moves through application components.
+### 3️⃣ Investigate — Loki narrows it down with LogQL
 
-A trace consists of one or more spans containing information such as:
+Filtering `{service="demo-app"} |= "error"` surfaces the dominant failure pattern — `Connection pool exhausted` — and, critically, a `trace_id` embedded in every structured log line.
 
-* Operation
-* Duration
-* Service
-* Attributes
-* Errors
+<img src="screenshots/loki-error-logs.png" alt="Grafana Explore Loki view filtering demo-app error logs and revealing a trace_id" width="850"/>
 
-They answer:
+### 4️⃣ Pinpoint — Tempo shows the exact trace behind the log line
 
-> **Where did the request spend time or fail?**
+Following that `trace_id` into Tempo reveals the full request waterfall: a `GET /api/orders` span running **1.91s** and returning `503`, with the slow `db.query` span as the clear bottleneck — logs and traces correlated side by side.
 
-**Backend:** Tempo
+<img src="screenshots/tempo-trace-with-logs.png" alt="Tempo trace waterfall for GET /api/orders correlated with the matching Loki log line" width="850"/>
 
----
+### 5️⃣ Fix & Verify
 
-# 🔗 Telemetry Correlation
+Removing the fault flags and restarting the app, then replaying clean traffic, drives error rate back to 0%, latency back under 50ms, and the alert transitions from `firing` → `resolved` in Alertmanager.
 
-The core value of this project is not simply collecting three different types of data.
-
-It is **correlating them**.
-
-For example:
+**The full loop, proven with real telemetry:**
 
 ```text
-High Latency
-     │
-     ▼
-Prometheus
-     │
-     ▼
-Identify affected endpoint
-     │
-     ▼
-Trace
-     │
-     ▼
-Find slow operation
-     │
-     ▼
-Logs
-     │
-     ▼
-Identify application error
-     │
-     ▼
-Root Cause
+Alert fires (Prometheus) → Dashboard confirms (Grafana) → Pattern found (Loki)
+        → Root cause pinpointed (Tempo) → Fixed → Verified recovered
 ```
 
-This allows an operator to move from a high-level symptom to a specific failure.
+---
+
+## 🚨 Alerting
+
+| Alert | Condition | Severity |
+|---|---|---|
+| `HighErrorRate` | 5xx rate elevated over a rolling window | warning |
+| `HighLatency` | `histogram_quantile(0.95, ...) > 0.5s` for 30s | warning |
+| `HighMemoryUsage` | Heap/leak growth trending upward | warning |
+
+Alerts route through Alertmanager and auto-resolve once the underlying condition clears for the configured `for` duration — no manual dismissal needed.
 
 ---
 
-# 🚨 Incident Response Workflow
+## 🛠️ Running the Project
 
-The platform includes a production-style incident investigation workflow.
-
-A failure is introduced into the application and the resulting telemetry is used to diagnose the problem.
-
-```text
-              Application Failure
-                       │
-                       ▼
-               Error / Latency
-                       │
-                       ▼
-                 Prometheus
-                       │
-                       ▼
-                  Alert Fires
-                       │
-                       ▼
-                    Grafana
-                       │
-              ┌────────┼────────┐
-              ▼        ▼        ▼
-           Metrics    Traces    Logs
-              │        │        │
-              └────────┼────────┘
-                       ▼
-                 Root Cause
-                       │
-                       ▼
-                     Fix
-                       │
-                       ▼
-               Verify Recovery
-```
-
-The objective is to demonstrate the complete operational loop:
-
-**Detect → Investigate → Identify → Fix → Verify**
-
----
-
-# 📡 OpenTelemetry Pipeline
-
-OpenTelemetry provides the instrumentation and telemetry pipeline connecting the application with the observability backends.
-
-```text
-                    Application
-                         │
-                         ▼
-                 OpenTelemetry SDK
-                         │
-                        OTLP
-                         │
-                         ▼
-              OpenTelemetry Collector
-                         │
-             ┌───────────┼───────────┐
-             │           │           │
-             ▼           ▼           ▼
-          Metrics       Logs       Traces
-             │           │           │
-             ▼           ▼           ▼
-        Prometheus      Loki        Tempo
-```
-
-The Collector provides a central point for receiving, processing, and exporting telemetry instead of coupling the application directly to every observability backend.
-
----
-
-# 📊 Grafana Dashboards
-
-Grafana provides a unified interface for investigating application behavior.
-
-The dashboards focus on operational signals such as:
-
-### Application
-
-* Request rate
-* Error rate
-* Request latency
-* Endpoint health
-* HTTP status codes
-
-### Infrastructure
-
-* CPU utilization
-* Memory utilization
-* Resource consumption
-* Service availability
-
-### Reliability
-
-* Error percentage
-* Latency trends
-* Availability
-* Alert state
-
-### Troubleshooting
-
-* Logs
-* Trace details
-* Error messages
-* Related telemetry
-
----
-
-# 🚨 Alerting
-
-Alerting converts observed conditions into actionable incidents.
-
-Examples of monitored conditions include:
-
-```text
-High Error Rate
-      │
-      ▼
-Prometheus Rule
-      │
-      ▼
-Alertmanager
-      │
-      ▼
-Alert Routing
-```
-
-Alerts are designed around operational conditions rather than simply monitoring whether a process exists.
-
----
-
-# 🧪 Failure Simulation
-
-Observability is only useful if it can help diagnose failures.
-
-The application is therefore tested against simulated failure scenarios such as:
-
-* Increased request latency
-* HTTP 5xx errors
-* Application failures
-* Resource-related problems
-
-The resulting telemetry is investigated through:
-
-**Metrics → Traces → Logs**
-
-This validates that the observability pipeline is functioning as an operational troubleshooting system rather than simply producing dashboards.
-
----
-
-# 🛠️ Running the Project
-
-## Prerequisites
-
-Install:
-
-* Docker
-* Docker Compose
-* Git
-
-Verify:
+### Prerequisites
 
 ```bash
 docker --version
@@ -400,241 +176,149 @@ docker compose version
 git --version
 ```
 
----
-
-## Clone the Repository
+### Clone & Start
 
 ```bash
-git clone https://github.com/<your-username>/cloud-native-observability-platform.git
-
+git clone https://github.com/Preetam-3/cloud-native-observability-platform.git
 cd cloud-native-observability-platform
-```
 
----
-
-## Start the Stack
-
-```bash
 docker compose up -d
+docker compose ps        # verify all services are healthy
+docker compose logs -f   # tail logs
 ```
 
-Verify running containers:
+### Access the Stack
+
+| Service | URL |
+|---|---|
+| Grafana | http://localhost:3001 |
+| Prometheus | http://localhost:9090 |
+| Alertmanager | http://localhost:9093 |
+| Loki (via Grafana Explore) | http://localhost:3100 |
+| Tempo (via Grafana Explore) | http://localhost:3200 |
+| Demo app | http://localhost:4000 |
+
+### Reproduce the Incident
 
 ```bash
-docker compose ps
+# 1. Inject the fault
+SIMULATE_DB_LATENCY=true SIMULATE_MEMORY_LEAK=true docker compose up -d demo-app
+
+# 2. Generate load
+for i in $(seq 1 100); do
+  curl -s http://localhost:4000/api/users  > /dev/null
+  curl -s http://localhost:4000/api/orders > /dev/null
+  sleep 0.5
+done
+
+# 3. Watch Alertmanager / Grafana, then investigate via Loki → Tempo
+
+# 4. Fix and verify
+docker compose stop demo-app
+docker compose up -d demo-app
 ```
 
-View logs:
+### Stop & Clean Up
 
 ```bash
-docker compose logs -f
+docker compose down -v
 ```
 
 ---
 
-## Stop the Stack
+## 🔍 Troubleshooting Approach
 
-```bash
-docker compose down
-```
-
----
-
-# 🔍 Troubleshooting Approach
-
-When something fails, the project follows a structured debugging process rather than immediately restarting containers.
-
-### 1. Check service state
-
-```bash
-docker compose ps
-```
-
-### 2. Inspect service logs
-
-```bash
-docker compose logs <service>
-```
-
-### 3. Verify connectivity
-
-Check whether the relevant service can reach its telemetry backend.
-
-### 4. Validate telemetry
-
-Confirm that metrics, logs, or traces are actually arriving.
-
-### 5. Check Grafana
-
-Use dashboards and Explore to investigate the affected signal.
-
-### 6. Correlate telemetry
-
-Move between:
-
-```text
-Metrics
-   ↓
-Traces
-   ↓
-Logs
-```
-
-### 7. Identify root cause
-
-Determine whether the problem originated in:
-
-* Application code
-* Dependency
-* Configuration
-* Resource usage
-* Telemetry pipeline
-
-### 8. Verify recovery
-
-Confirm that the affected signals return to normal after the fix.
+1. **Check service state** — `docker compose ps`
+2. **Inspect service logs** — `docker compose logs <service>`
+3. **Verify connectivity** — can the service reach its backend?
+4. **Validate telemetry** — is data actually arriving?
+5. **Check Grafana** — dashboards + Explore
+6. **Correlate** — Metrics → Traces → Logs
+7. **Identify root cause** — app code, dependency, config, or resources
+8. **Verify recovery** — signals return to baseline
 
 ---
 
-# 📁 Repository Structure
+## 📁 Repository Structure
 
 ```text
 cloud-native-observability-platform/
-│
-├── app/
-│   ├── Dockerfile
-│   ├── package.json
-│   └── ...
-│
-├── otel-collector/
+├── app/                          # Node.js/Express demo app + OTel instrumentation
+├── otel/
 │   └── otel-collector-config.yml
-│
 ├── prometheus/
 │   ├── prometheus.yml
 │   └── rules/
-│
 ├── loki/
 │   └── loki-config.yml
-│
 ├── tempo/
 │   └── tempo.yml
-│
 ├── grafana/
 │   ├── dashboards/
 │   └── provisioning/
-│
 ├── alertmanager/
 │   └── alertmanager.yml
-│
+├── screenshots/                  # incident walkthrough images used in this README
 ├── docker-compose.yml
-│
-├── .gitignore
 └── README.md
 ```
 
 ---
 
-# 🧠 Key Engineering Concepts Demonstrated
+## 🧠 Key Engineering Concepts Demonstrated
 
-This project demonstrates practical understanding of:
-
-* Observability architecture
-* Metrics, logs, and distributed traces
-* OpenTelemetry instrumentation
-* OTLP telemetry transport
-* OpenTelemetry Collector pipelines
-* Prometheus time-series monitoring
-* PromQL
-* Centralized logging
-* Distributed tracing
-* Grafana dashboards
-* Alerting and incident detection
-* Reliability monitoring
-* Root-cause analysis
-* Telemetry correlation
-* Docker networking
-* Containerized infrastructure
-* Production-style troubleshooting
+Observability architecture · OpenTelemetry instrumentation & OTLP · Collector pipelines · Prometheus & PromQL · Centralized logging & LogQL · Distributed tracing · Grafana dashboards & correlation · Alerting lifecycles · Root-cause analysis · Docker networking · Production-style incident troubleshooting
 
 ---
 
-# 💡 Key Lessons
+## 💡 Key Lessons
 
-### Monitoring ≠ Observability
+**Monitoring ≠ Observability.** Monitoring tells you a known condition occurred. Observability gives you enough context to investigate *unknown* failure modes.
 
-Monitoring tells you that a known condition is happening.
+**More dashboards ≠ better observability.** A panel only earns its place if it helps someone make a decision.
 
-Observability provides enough information to investigate **unknown failure modes**.
-
----
-
-### More dashboards ≠ Better observability
-
-A dashboard is only useful when the signals help an operator make a decision.
-
-The objective is actionable telemetry, not visual complexity.
-
----
-
-### Metrics, logs, and traces solve different problems
-
+**Each signal answers a different question:**
 ```text
 Metrics → What is happening?
 Logs    → What happened?
 Traces  → Where did it happen?
 ```
 
-Together they provide much stronger incident investigation capabilities.
+**Alerts should be actionable**, not noise — every alert here maps to a condition worth waking someone up for.
 
 ---
 
-### Alerting should be actionable
+## 📈 Future Improvements
 
-An alert should indicate a condition that requires investigation or action rather than simply generating noise.
-
----
-
-# 📈 Future Improvements
-
-Potential extensions include:
-
-* Kubernetes deployment
-* Helm-based installation
-* SLO and error-budget tracking
-* Persistent observability storage
-* Advanced alert routing
-* Synthetic monitoring
-* CI/CD integration
-* Automated deployment
-* Horizontal scaling
-* Multi-service distributed tracing
-* Chaos/failure testing
+- [ ] SLO-based alerting with error budgets
+- [ ] Alertmanager routing to Slack / PagerDuty
+- [ ] Sampling strategy for high-traffic services
+- [ ] Log retention policies
+- [ ] Kubernetes deployment via Helm
+- [ ] Synthetic monitoring / health probes
+- [ ] CI/CD pipeline for the stack itself
 
 ---
 
-# 📚 References
+## 📚 References
 
-* [DevOpsPath — Monitoring Stack Project](https://devopspath.io/learn/monitoring/501-monitoring-stack-project)
-* [OpenTelemetry](https://opentelemetry.io/)
-* [Prometheus](https://prometheus.io/)
-* [Grafana](https://grafana.com/)
-* [Grafana Loki](https://grafana.com/oss/loki/)
-* [Grafana Tempo](https://grafana.com/oss/tempo/)
+- [OpenTelemetry](https://opentelemetry.io/)
+- [Prometheus](https://prometheus.io/)
+- [Grafana](https://grafana.com/)
+- [Grafana Loki](https://grafana.com/oss/loki/)
+- [Grafana Tempo](https://grafana.com/oss/tempo/)
 
 ---
 
-# 👤 Author
+<div align="center">
+
+## 👤 Author
 
 **Preetam Kumar Badatya**
-
-**DevOps • Cloud • DevSecOps • SRE**
-
----
-
-<p align="center">
+DevOps • Cloud • DevSecOps • SRE
 
 ### 🔭 Observe → 🚨 Detect → 🔍 Investigate → 🛠️ Fix → ✅ Verify
 
 **Building systems that don't just tell you something is broken — they help you understand why.**
 
-</p>
+</div>
